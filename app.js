@@ -1,23 +1,31 @@
 const axios = require('axios')
 const credentials = require('./credentials')
 
-const wfMarketReq = axios.create({
-    baseURL: 'https://api.warframe.market/v1',
-    header: {'Authorization': 'JWT ' + credentials.readFromCredentials(credentials.CredentialKey.token) }
-})
+let wfMarketReq;
 
-async function authorize() {
-    const res = await wfMarketReq.post('/auth/signin', {...requestBody})
-    console.log(res);
-}
-
-async function main() {
+async function login() {
     const requestBody = {
-        "auth_type": "cookie",
+        "auth_type": "header",
         "email": await credentials.readFromCredentials(credentials.CredentialKey.email),
         "password": await credentials.readFromCredentials(credentials.CredentialKey.password)
     }
-    console.log(requestBody)
+    return await wfMarketReq.post('/auth/signin', requestBody);
+}
+
+async function main() {
+    wfMarketReq = axios.create({
+        baseURL: 'https://api.warframe.market/v1',
+        headers: {
+            'Authorization': 'JWT ' + await credentials.readFromCredentials(credentials.CredentialKey.token),
+            'Content-Type': 'application/json',
+            'platform': 'pc',
+            'language': 'en'
+        }
+    })
+
+
+    const response = await login();
+    console.log(response.data);
 }
 
 main();
