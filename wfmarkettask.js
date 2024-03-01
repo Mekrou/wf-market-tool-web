@@ -37,20 +37,30 @@ async function login() {
     }
 }
 
-async function createOrder() {
-    await login();
+// const requestBody = {
+//     "item": "5a2feeb1c2c9e90cbdaa23d2",
+//     "order_type": "sell",
+//     "platinum": 12,
+//     "quantity": 5,
+//     "visible": true,
+// }
 
-    const requestBody = {
-        "item": "5a2feeb1c2c9e90cbdaa23d2",
-        "order_type": "sell",
-        "platinum": 12,
-        "quantity": 5,
-        "visible": true,
-    }
+async function getOrderID(item_name) {
 
-    console.log("creating order...")
-    const res = await wfMarketReq.post('/profile/orders', requestBody)
-    console.log(res.data)
+}
+
+
+/**
+ * @async Creates an order on WFMarket
+ * @param {Object} options expected to have at minimum item_name & cost properties.
+ * @param {string} options.item_name - The name of the item to order.
+ * @param {number} options.cost - The amount of plat to put it with.
+ * @param {number} [options.quantity=1] - The amount of orders to place (optional, defaults to 1)
+ */
+async function createOrder({ item_name, cost, quantity = 1}) {
+    if (!item_name || !cost) throw new Error("Cannot create order without name and cost")
+
+    console.log(`Creating ${quantity} order(s) for ${item_name} at ${cost}`)
 }
 
 module.exports = { login, createOrder }

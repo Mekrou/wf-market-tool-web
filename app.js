@@ -1,7 +1,7 @@
 const wfMarketTask = require('./wfmarkettask')
 
 async function main() {
-    await wfMarketTask.createOrder();
+    await wfMarketTask.createOrder({ item_name: 'mirage_prime_systems', cost: 50});
     // const responseOrder = await wfMarketTask.createOrder(responseLogin);
     // const order_id = responseOrder.data.payload.order.id;
 
