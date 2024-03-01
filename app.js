@@ -1,10 +1,7 @@
-const axios = require('axios')
-const credentials = require('./credentials')
 const wfMarketTask = require('./wfmarkettask')
 
 async function main() {
-    const responseLogin = await wfMarketTask.login();
-
+    await wfMarketTask.createOrder();
     // const responseOrder = await wfMarketTask.createOrder(responseLogin);
     // const order_id = responseOrder.data.payload.order.id;
 

@@ -1,36 +1,45 @@
 const axios = require('axios')
 const credentials = require('./credentials')
 
-
+let isLoggedIn;
 let wfMarketReq;
 
-(async function init() {
-    wfMarketReq = axios.create({
-        baseURL: 'https://api.warframe.market/v1',
-        headers: {
-            'Authorization': await credentials.readFromCredentials(credentials.CredentialKey.token),
-            'Content-Type': 'application/json',
-            'platform': 'pc',
-            'language': 'en'
-        }
-    })
-})();
-
-
 async function login() {
-    const requestBody = {
-        "auth_type": "header",
-        "email": await credentials.readFromCredentials(credentials.CredentialKey.email),
-        "password": await credentials.readFromCredentials(credentials.CredentialKey.password)
+    if (!isLoggedIn) {
+        const requestBody = {
+            "auth_type": "header",
+            "email": await credentials.readFromCredentials(credentials.CredentialKey.email),
+            "password": await credentials.readFromCredentials(credentials.CredentialKey.password)
+        }
+        console.log("logging in...");
+        const res = await axios.post('https://api.warframe.market/v1/auth/signin', requestBody, {
+            headers: {
+                'Authorization': await credentials.readFromCredentials(credentials.CredentialKey.token),
+                'Content-Type': 'application/json',
+                'platform': 'pc',
+                'language': 'en',
+            }
+        });
+        if (res.status != 200) throw new Error("Could not login!");
+        /* update credentials.json and our axios instance to use the most updated token from WFMarket */
+        await credentials.updateToken(res.headers.authorization);
+        wfMarketReq = axios.create({
+            baseURL: 'https://api.warframe.market/v1',
+            headers: {
+                'Authorization': res.headers.authorization,
+                'Content-Type': 'application/json',
+                'platform': 'pc',
+                'language': 'en',
+            }
+        });
+        console.log("Successfully logged in!")
+        isLoggedIn = true
     }
-    console.log("logging in...")
-    const res = await wfMarketReq.post('/auth/signin', requestBody)
-    if (res.status != 200) throw new Error("Could not login!")
-    credentials.updateToken(res.headers.authorization)
-    return res;
 }
 
-async function createOrder(responseLogin) {
+async function createOrder() {
+    await login();
+
     const requestBody = {
         "item": "5a2feeb1c2c9e90cbdaa23d2",
         "order_type": "sell",
@@ -39,13 +48,9 @@ async function createOrder(responseLogin) {
         "visible": true,
     }
 
-    console.log(responseLogin.headers.authorization)
-
-    return await axios.post('https://api.warframe.market/v1/profile/orders', requestBody, {
-        headers: {
-            'Authorization': responseLogin.headers.authorization,
-        }
-    })
+    console.log("creating order...")
+    const res = await wfMarketReq.post('/profile/orders', requestBody)
+    console.log(res.data)
 }
 
-module.exports = {login, createOrder}
+module.exports = { login, createOrder }
