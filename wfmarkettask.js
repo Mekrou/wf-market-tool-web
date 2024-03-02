@@ -1,5 +1,7 @@
 const axios = require('axios')
 const credentials = require('./credentials')
+const path = require('path')
+const fs = require('fs').promises
 
 let isLoggedIn;
 let wfMarketReq;
@@ -37,6 +39,16 @@ async function login() {
     }
 }
 
+async function parseJson(filename) {
+    try {
+        filename = filename + '.json'
+        const data = await fs.readFile(path.join(__dirname, filename));
+        return JSON.parse(data);
+    } catch (error) {
+        console.log(error)
+    }
+}
+
 // const requestBody = {
 //     "item": "5a2feeb1c2c9e90cbdaa23d2",
 //     "order_type": "sell",
@@ -46,7 +58,12 @@ async function login() {
 // }
 
 async function getOrderID(item_name) {
-
+    try {
+        const augment = await parseJson('augment')
+        console.log(augment['New Loka']['AugmentMods'])
+    } catch (error) {
+        
+    }
 }
 
 
@@ -59,7 +76,7 @@ async function getOrderID(item_name) {
  */
 async function createOrder({ item_name, cost, quantity = 1}) {
     if (!item_name || !cost) throw new Error("Cannot create order without name and cost")
-
+    getOrderID('hi')
     console.log(`Creating ${quantity} order(s) for ${item_name} at ${cost}`)
 }
 
