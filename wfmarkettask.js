@@ -1,6 +1,7 @@
 const axios = require('axios')
 const credentials = require('./credentials')
-const path = require('path')
+const path = require('path');
+const { setTimeout } = require('timers/promises');
 const fs = require('fs').promises
 
 let isLoggedIn;
@@ -66,6 +67,29 @@ async function getOrderID(item_name) {
     }
 }
 
+async function test() {
+    await populateModIds()
+}
+
+async function delay(delay) {
+    return setTimeout(delay)
+}
+
+async function populateModIds() {
+    const augment = await parseJson('augment')
+    const augmentNamesAndIds = new Map();
+    for (let syndicate in augment) {
+        for (let mod of augment[syndicate]['AugmentMods']) {
+            const res = await wfMarketReq.get(`/items/${mod.modName}`)
+            const { id } = res.data['payload']['item']
+            console.log(`Setting ${mod.modName} to ${id}`)
+            augmentNamesAndIds.set(mod.modName, id)
+            await delay(5000)
+        }
+    }
+    const jsonToWrite = JSON.stringify(augmentNamesAndIds);
+    await fs.writeFile(path.join(__dirname, 'augmentNamesAndIds.json'), jsonToWrite)
+}
 
 /**
  * @async Creates an order on WFMarket
@@ -80,4 +104,4 @@ async function createOrder({ item_name, cost, quantity = 1}) {
     console.log(`Creating ${quantity} order(s) for ${item_name} at ${cost}`)
 }
 
-module.exports = { login, createOrder }
+module.exports = { login, createOrder, test}

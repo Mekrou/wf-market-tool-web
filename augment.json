@@ -19,7 +19,7 @@
                 "WFMarketID": "Default"
             },
             {
-                "modName": "peaceful provocation",
+                "modName": "peaceful_provocation",
                 "WFMarketID": "Default"
             },
             {
@@ -31,7 +31,7 @@
                 "WFMarketID": "Default"
             },
             {
-                "modName": "medning_splinters",
+                "modName": "mending_splinters",
                 "WFMarketID": "Default"
             },
             {
@@ -159,10 +159,6 @@
                 "WFMarketID": "Default"
             },
             {
-                "modName": "hyterical_assault",
-                "WFMarketID": "Default"
-            },
-            {
                 "modName": "enraged",
                 "WFMarketID": "Default"
             },
@@ -272,7 +268,7 @@
                 "WFMarketID": "Default"
             },
             {
-                "modName": "dessiccations_curse",
+                "modName": "desiccations_curse",
                 "WFMarketID": "Default"
             },
             {
@@ -405,10 +401,6 @@
             },
             {
                 "modName": "prolonged_paralysis",
-                "WFMarketID": "Default"
-            },
-            {
-                "modName": "hysterical_assault",
                 "WFMarketID": "Default"
             },
             {
