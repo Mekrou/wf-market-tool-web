@@ -68,14 +68,18 @@ async function getOrderID(item_name) {
 }
 
 async function test() {
-    await populateModIds()
+    
 }
 
 async function delay(delay) {
     return setTimeout(delay)
 }
 
-async function populateModIds() {
+/**
+ * @async Loops through each mod name in augments.json & retrieves its respective ID from WFMarket.
+ * Updates the name => id map in augmentNamesAndIds.json
+ */
+async function updateModIds() {
     const augment = await parseJson('augment')
     const augmentNamesAndIds = new Map();
     for (let syndicate in augment) {
@@ -84,11 +88,16 @@ async function populateModIds() {
             const { id } = res.data['payload']['item']
             console.log(`Setting ${mod.modName} to ${id}`)
             augmentNamesAndIds.set(mod.modName, id)
-            await delay(5000)
+            await delay(1000)
         }
     }
-    const jsonToWrite = JSON.stringify(augmentNamesAndIds);
+    const mapArray = Array.from(augmentNamesAndIds);
+    const jsonToWrite = JSON.stringify(mapArray, null, 2);
     await fs.writeFile(path.join(__dirname, 'augmentNamesAndIds.json'), jsonToWrite)
+}
+
+async function getModId(modName) {
+
 }
 
 /**
