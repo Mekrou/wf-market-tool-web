@@ -68,7 +68,8 @@ async function getOrderID(item_name) {
 }
 
 async function test() {
-    
+    const id = await getModId('dualit')
+    console.log(id)
 }
 
 async function delay(delay) {
@@ -96,8 +97,29 @@ async function updateModIds() {
     await fs.writeFile(path.join(__dirname, 'augmentNamesAndIds.json'), jsonToWrite)
 }
 
+/**
+ * 
+ * @param {string} modName The name of the mod to find. All lowercase, with spaces as underscores.
+ * @example getModId('creeping_terrify') -> '56b656e0ef0390c7e4006383'
+ * @returns the mod ID as a string.
+ */
 async function getModId(modName) {
-
+    try {
+        const data = await fs.readFile(path.join(__dirname, 'augmentNamesAndIds.json'));
+        const nameToIdMap = JSON.parse(data);
+        let modWithId = undefined;
+        for (let el of nameToIdMap) {
+            if (el[0] === modName) {
+                modWithId = el
+            }
+        }
+        if (modWithId === undefined) {
+            throw new Error(`Could not find mod with name of ${modName}`)
+        }
+        return modWithId[1]
+    } catch (error) {
+        console.log(error)
+    }
 }
 
 /**
