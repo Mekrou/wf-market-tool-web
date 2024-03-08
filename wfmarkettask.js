@@ -67,21 +67,8 @@ async function getOrderID(item_name) {
     }
 }
 
-async function test() {
-    const augment = await parseJson('augment')
-    const newAugment = new Object();
-    for(let syndicate in augment) {
-        newAugment[syndicate] = new Object();
-        let modsAsObjects = new Object();
-        for (let mod of augment[syndicate]['AugmentMods']) {
-            modsAsObjects[mod.modName] = "Default";
-            
-        }
-        newAugment[syndicate]['AugmentMods'] = modsAsObjects
-    }
-    const jsonToWrite = JSON.stringify(newAugment, null, 2)
-    await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
-    
+async function test() {    
+    updateJsonDbModIds();
 }
 
 async function delay(delay) {
@@ -110,12 +97,26 @@ async function updateModIds() {
 }
 
 /**
+ * @async Updates every mod in database to have the current id. ID is retrieved from getModId()
+ */
+async function updateJsonDbModIds() {
+    const database = await parseJson('database');
+    for (let syndicate in database) {
+        for (let mod in database[syndicate]['AugmentMods']) {
+            database[syndicate]['AugmentMods'][mod] = await getModID(mod)
+        }
+    }
+    const jsonToWrite = JSON.stringify(database);
+    await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
+}
+
+/**
  * @async Loops through mod name -> id map to find a mod's id with given name.
  * @param {string} modName The name of the mod to find. All lowercase, with spaces as underscores.
  * @example getModId('creeping_terrify') -> '56b656e0ef0390c7e4006383'
  * @returns the mod ID as a string.
  */
-async function getModId(modName) {
+async function getModID(modName) {
     try {
         const nameToIdMap = await parseJson('augmentNamesAndIds');
         let modWithId = undefined;
@@ -150,7 +151,7 @@ async function postAugmentOrders() {
  */
 async function createOrder({ item_name, cost, quantity = 1}) {
     if (!item_name || !cost) throw new Error("Cannot create order without name and cost")
-    const itemID = await getModId('hi')
+    const itemID = await getModID('hi')
     console.log(`Creating ${quantity} order(s) for ${item_name} at ${cost}`)
 }
 
