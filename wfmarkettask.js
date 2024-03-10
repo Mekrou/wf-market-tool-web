@@ -6,6 +6,23 @@ const fs = require('fs').promises
 
 let isLoggedIn;
 let wfMarketReq;
+const wfStatApi = axios.create({
+    baseURL: 'https://api.warframestat.us'
+});
+
+/**
+ * The name of Warframe Syndicates
+ * @enum {string}
+ * @readonly
+ */
+const Syndicate = {
+    The_Perrin_Sequence: "the_perrin_sequence",
+    New_Loka: "new_loka",
+    Steel_Meridian: "steel_meridian",
+    Arbiters_of_Hexis: "arbiters_of_hexis",
+    Red_Veil: "red_veil",
+    Cephalon_Suda: "cephalon_suda"
+}
 
 async function login() {
     if (!isLoggedIn) {
@@ -63,12 +80,12 @@ async function getOrderID(item_name) {
         const augment = await parseJson('augment')
         console.log(augment['New Loka']['AugmentMods'])
     } catch (error) {
-        
+
     }
 }
 
-async function test() {    
-    updateJsonDbModIds();
+async function test() {
+    await queryWarframeStatApi();
 }
 
 async function delay(delay) {
@@ -110,6 +127,44 @@ async function updateJsonDbModIds() {
     await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
 }
 
+async function queryWarframeStatApi(query, only, remove, by, language) {
+    const res = await wfStatApi.get('/mods', {
+        params: {
+            language: 'en',
+            only: 'name,isAugment,drops'
+        }
+    })
+    const augmentMods = new Set();
+    // parse only augment mods
+    const mods = res.data;
+    mods.forEach(mod => {
+        if (mod.isAugment) {
+            if (mod.drops) {
+                mod.drops.forEach(drop => {
+                    if (!(drop.location.includes('Conclave'))) {
+                        augmentMods.add(mod.name)
+                    }
+                })
+            }
+
+        }
+    });
+
+    console.log(augmentMods)
+
+
+    // for (let modObj of res.data) {
+    //     if (modObj.isAugment === true) {
+    //         for (let syndicate in modObj.drops)
+    //         {
+    //             if (!(modObj.drops[syndicate].location.includes('Conclave'))) {
+    //                 console.log(modObj.name)
+    //             }
+    //         }
+    //     }
+    // }
+}
+
 /**
  * @async Loops through mod name -> id map to find a mod's id with given name.
  * @param {string} modName The name of the mod to find. All lowercase, with spaces as underscores.
@@ -149,10 +204,10 @@ async function postAugmentOrders() {
  * @param {number} options.cost - The amount of plat to put it with.
  * @param {number} [options.quantity=1] - The amount of orders to place (optional, defaults to 1)
  */
-async function createOrder({ item_name, cost, quantity = 1}) {
+async function createOrder({ item_name, cost, quantity = 1 }) {
     if (!item_name || !cost) throw new Error("Cannot create order without name and cost")
     const itemID = await getModID('hi')
     console.log(`Creating ${quantity} order(s) for ${item_name} at ${cost}`)
 }
 
-module.exports = { login, createOrder, test}
+module.exports = { login, createOrder, test }
