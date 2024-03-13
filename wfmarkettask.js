@@ -85,7 +85,7 @@ async function getOrderID(item_name) {
 }
 
 async function test() {
-    await queryWarframeStatApi();
+    await transformAugmentModsToWFMarketStyle();
 }
 
 async function delay(delay) {
@@ -127,7 +127,26 @@ async function updateJsonDbModIds() {
     await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
 }
 
-async function queryWarframeStatApi(query, only, remove, by, language) {
+/**
+ * @returns An array of WF's Augment mods (excluding conclave) names in the format that WF Market uses (all lowercase, spaces as underscores, remove apostrophies)
+ * @example 
+ * ['abating_link', 'abundant_mutation', ... ]
+ */
+async function transformAugmentModsToWFMarketStyle() {
+    const augmentMods = await getWarframeAugmentMods();
+    const transformedAugmentModNames = new Array();
+    augmentMods.forEach(modName => {
+        const lowerCaseName = modName.toLowerCase();
+        transformedAugmentModNames.push(lowerCaseName.replace(' ', '_').replace("'", ''));
+    })
+    return transformedAugmentModNames;
+}
+
+/**
+ * Uses warframe stats api to retrieve a list of all warframe augment mod names.
+ * @returns A set containing a String of every Warframe Augment Mod, excluding conclave ones.
+ */
+async function getWarframeAugmentMods() {
     const res = await wfStatApi.get('/mods', {
         params: {
             language: 'en',
@@ -150,19 +169,7 @@ async function queryWarframeStatApi(query, only, remove, by, language) {
         }
     });
 
-    console.log(augmentMods)
-
-
-    // for (let modObj of res.data) {
-    //     if (modObj.isAugment === true) {
-    //         for (let syndicate in modObj.drops)
-    //         {
-    //             if (!(modObj.drops[syndicate].location.includes('Conclave'))) {
-    //                 console.log(modObj.name)
-    //             }
-    //         }
-    //     }
-    // }
+    return augmentMods;
 }
 
 /**
