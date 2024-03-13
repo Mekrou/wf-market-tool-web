@@ -85,7 +85,7 @@ async function getOrderID(item_name) {
 }
 
 async function test() {
-    await transformAugmentModsToWFMarketStyle();
+    await updateModIds('');
 }
 
 async function delay(delay) {
@@ -113,6 +113,21 @@ async function updateModIds() {
     await fs.writeFile(path.join(__dirname, 'augmentNamesAndIds.json'), jsonToWrite)
 }
 
+async function updateModIds(hi) {
+    const augmentModNames = await getWarframeAugmentMods();
+    const augmentNamesAndIds = new Array();
+    for (let modName of augmentModNames) {
+        await delay(500);
+        const res = await wfMarketReq.get(`/items/${modName}`);
+        const { id } = res.data['payload']['item'];
+        console.log(`Setting ${modName} to ${id}`);
+        augmentNamesAndIds.push([modName, id])
+    }
+    
+    const jsonToWrite = JSON.stringify(augmentNamesAndIds, null, 2);
+    await fs.writeFile(path.join(__dirname, 'augmentNamesAndIds.json'), jsonToWrite)
+}
+
 /**
  * @async Updates every mod in database to have the current id. ID is retrieved from getModId()
  */
@@ -132,12 +147,11 @@ async function updateJsonDbModIds() {
  * @example 
  * ['abating_link', 'abundant_mutation', ... ]
  */
-async function transformAugmentModsToWFMarketStyle() {
-    const augmentMods = await getWarframeAugmentMods();
+function transformAugmentModsToWFMarketStyle(augmentModNames) {
     const transformedAugmentModNames = new Array();
-    augmentMods.forEach(modName => {
+    augmentModNames.forEach(modName => {
         const lowerCaseName = modName.toLowerCase();
-        transformedAugmentModNames.push(lowerCaseName.replace(' ', '_').replace("'", ''));
+        transformedAugmentModNames.push(lowerCaseName.replaceAll(' ', '_').replaceAll("'", '').replaceAll("&", "and"));
     })
     return transformedAugmentModNames;
 }
@@ -153,7 +167,7 @@ async function getWarframeAugmentMods() {
             only: 'name,isAugment,drops'
         }
     })
-    const augmentMods = new Set();
+    const augmentModNames = new Set();
     // parse only augment mods
     const mods = res.data;
     mods.forEach(mod => {
@@ -161,7 +175,7 @@ async function getWarframeAugmentMods() {
             if (mod.drops) {
                 mod.drops.forEach(drop => {
                     if (!(drop.location.includes('Conclave'))) {
-                        augmentMods.add(mod.name)
+                        augmentModNames.add(mod.name)
                     }
                 })
             }
@@ -169,7 +183,7 @@ async function getWarframeAugmentMods() {
         }
     });
 
-    return augmentMods;
+    return transformAugmentModsToWFMarketStyle(augmentModNames);
 }
 
 /**
