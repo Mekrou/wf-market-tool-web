@@ -85,35 +85,14 @@ async function getOrderID(item_name) {
 }
 
 async function test() {
-    await updateModIds('');
+    getPriceForItem("abundant_mutationaa")
 }
 
 async function delay(delay) {
     return setTimeout(delay)
 }
 
-/**
- * @async Loops through each mod name in augments.json & retrieves its respective ID from WFMarket.
- * Updates the name => id map in augmentNamesAndIds.json
- */
 async function updateModIds() {
-    const augment = await parseJson('augment')
-    const augmentNamesAndIds = new Map();
-    for (let syndicate in augment) {
-        for (let mod of augment[syndicate]['AugmentMods']) {
-            const res = await wfMarketReq.get(`/items/${mod.modName}`)
-            const { id } = res.data['payload']['item']
-            console.log(`Setting ${mod.modName} to ${id}`)
-            augmentNamesAndIds.set(mod.modName, id)
-            await delay(1000)
-        }
-    }
-    const mapArray = Array.from(augmentNamesAndIds);
-    const jsonToWrite = JSON.stringify(mapArray, null, 2);
-    await fs.writeFile(path.join(__dirname, 'augmentNamesAndIds.json'), jsonToWrite)
-}
-
-async function updateModIds(hi) {
     const augmentModNames = await getWarframeAugmentMods();
     const augmentNamesAndIds = new Array();
     for (let modName of augmentModNames) {
@@ -211,10 +190,24 @@ async function getModID(modName) {
 }
 
 /**
- * 
+ * Gets the average price of an item for the last 48 hours rounded up to the nearest integer.
+ * @returns {Number} average price
  */
-async function postAugmentOrders() {
-
+async function getPriceForItem(itemName) {
+    try {
+        const res = await wfMarketReq.get(`/items/${itemName}/statistics`)
+        const {statistics_live} = res.data.payload;
+        let sum = 0;
+        for (let obj of statistics_live['48hours']) {
+            if (obj.order_type == "sell") {
+                sum += obj.avg_price;
+            }
+        }
+        let avg_price = (Math.ceil(sum / statistics_live['48hours'].length))
+        return avg_price;
+    } catch (err) {
+        console.log(err)
+    }
 }
 
 
