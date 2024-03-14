@@ -69,11 +69,41 @@ async function parseJson(filename) {
 
 // const requestBody = {
 //     "item": "5a2feeb1c2c9e90cbdaa23d2",
-//     "order_type": "sell",
+//     ***"order_type": "sell",
 //     "platinum": 12,
 //     "quantity": 5,
 //     "visible": true,
 // }
+
+/**
+ * Post a mod sell order on WFMarket.
+ * @param {Object} order 
+ * @example postListing({
+ *    item: "abating_link",
+ *    sellPrice: 20,
+ *    quantity: 99
+ * })
+ */
+async function postModListing(order) {
+    if (typeof order.item !== 'string' || typeof order.sellPrice !== 'number' || typeof order.quantity !== 'number') {
+        throw new Error(`Invalid order object.  ${order.item} is of type ${typeof order.item}${order.sellPrice} is of type ${typeof order.sellPrice}${order.quantity} is of type ${typeof order.quantity}`)
+    }
+
+    try {
+        const requestBody = {
+            item: await getModID(order.item),
+            order_type: "sell",
+            platinum: order.sellPrice,
+            quantity: order.quantity,
+            visible: true,
+            rank: 0,
+        }
+        const res = await wfMarketReq.post('/profile/orders', requestBody)
+        return res;
+    } catch (error) {
+        console.log(error)
+    }
+}
 
 async function getOrderID(item_name) {
     try {
@@ -85,11 +115,38 @@ async function getOrderID(item_name) {
 }
 
 async function test() {
-    getPriceForItem("abundant_mutationaa")
+    const database = await parseJson('database');
+    for (let syndicate in database) {
+        database[syndicate].AugmentMods = new Object();
+        const augmentModNames = await getWarframeAugmentMods(syndicate)
+        for (let modName of augmentModNames) {
+            database[syndicate].AugmentMods[modName] = await getModID(modName)
+        }
+    }
+    const jsonToWrite = JSON.stringify(database, null, 2);
+    await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
 }
 
 async function delay(delay) {
     return setTimeout(delay)
+}
+
+/**
+ * Using augmentNamesAndIds.json, posts an order on WFMarket for every WF augment mod using its average price
+ */
+async function generateAugmentListings() {
+    const augmentModNames = await getWarframeAugmentMods();
+    for (let modName of augmentModNames) {
+        await delay(300);
+        let listing = {
+            item: modName,
+            sellPrice: await getPriceForItem(modName),
+            quantity: 99,
+        }
+        await postModListing(listing);
+        console.log(`${modName} listing posted!`)
+    }
+
 }
 
 async function updateModIds() {
@@ -102,7 +159,7 @@ async function updateModIds() {
         console.log(`Setting ${modName} to ${id}`);
         augmentNamesAndIds.push([modName, id])
     }
-    
+
     const jsonToWrite = JSON.stringify(augmentNamesAndIds, null, 2);
     await fs.writeFile(path.join(__dirname, 'augmentNamesAndIds.json'), jsonToWrite)
 }
@@ -122,24 +179,10 @@ async function updateJsonDbModIds() {
 }
 
 /**
- * @returns An array of WF's Augment mods (excluding conclave) names in the format that WF Market uses (all lowercase, spaces as underscores, remove apostrophies)
- * @example 
- * ['abating_link', 'abundant_mutation', ... ]
- */
-function transformAugmentModsToWFMarketStyle(augmentModNames) {
-    const transformedAugmentModNames = new Array();
-    augmentModNames.forEach(modName => {
-        const lowerCaseName = modName.toLowerCase();
-        transformedAugmentModNames.push(lowerCaseName.replaceAll(' ', '_').replaceAll("'", '').replaceAll("&", "and"));
-    })
-    return transformedAugmentModNames;
-}
-
-/**
  * Uses warframe stats api to retrieve a list of all warframe augment mod names.
  * @returns A set containing a String of every Warframe Augment Mod, excluding conclave ones.
  */
-async function getWarframeAugmentMods() {
+async function getWarframeAugmentMods(syndicate) {
     const res = await wfStatApi.get('/mods', {
         params: {
             language: 'en',
@@ -154,7 +197,14 @@ async function getWarframeAugmentMods() {
             if (mod.drops) {
                 mod.drops.forEach(drop => {
                     if (!(drop.location.includes('Conclave'))) {
-                        augmentModNames.add(mod.name)
+                        if (syndicate) {
+                            if (drop.location.toLowerCase().includes(syndicate.replaceAll('_', ' '))) {
+                                augmentModNames.add(mod.name.toLowerCase().replaceAll(' ', '_').replaceAll("'", '').replaceAll("&", "and"))
+                            }
+                        } else {
+                            augmentModNames.add(mod.name.toLowerCase().replaceAll(' ', '_').replaceAll("'", '').replaceAll("&", "and"))
+                        }
+
                     }
                 })
             }
@@ -162,7 +212,7 @@ async function getWarframeAugmentMods() {
         }
     });
 
-    return transformAugmentModsToWFMarketStyle(augmentModNames);
+    return augmentModNames;
 }
 
 /**
@@ -191,12 +241,12 @@ async function getModID(modName) {
 
 /**
  * Gets the average price of an item for the last 48 hours rounded up to the nearest integer.
- * @returns {Number} average price
+ * @returns Average Price
  */
 async function getPriceForItem(itemName) {
     try {
         const res = await wfMarketReq.get(`/items/${itemName}/statistics`)
-        const {statistics_live} = res.data.payload;
+        const { statistics_live } = res.data.payload;
         let sum = 0;
         for (let obj of statistics_live['48hours']) {
             if (obj.order_type == "sell") {
@@ -210,18 +260,4 @@ async function getPriceForItem(itemName) {
     }
 }
 
-
-/**
- * @async Creates an order on WFMarket
- * @param {Object} options expected to have at minimum item_name & cost properties.
- * @param {string} options.item_name - The name of the item to order.
- * @param {number} options.cost - The amount of plat to put it with.
- * @param {number} [options.quantity=1] - The amount of orders to place (optional, defaults to 1)
- */
-async function createOrder({ item_name, cost, quantity = 1 }) {
-    if (!item_name || !cost) throw new Error("Cannot create order without name and cost")
-    const itemID = await getModID('hi')
-    console.log(`Creating ${quantity} order(s) for ${item_name} at ${cost}`)
-}
-
-module.exports = { login, createOrder, test }
+module.exports = { login, test }
