@@ -67,14 +67,6 @@ async function parseJson(filename) {
     }
 }
 
-// const requestBody = {
-//     "item": "5a2feeb1c2c9e90cbdaa23d2",
-//     ***"order_type": "sell",
-//     "platinum": 12,
-//     "quantity": 5,
-//     "visible": true,
-// }
-
 /**
  * Post a mod sell order on WFMarket.
  * @param {Object} order 
@@ -83,6 +75,8 @@ async function parseJson(filename) {
  *    sellPrice: 20,
  *    quantity: 99
  * })
+ * @returns the id of the order
+ * @example '65f47915b0f8090085a17e9d'
  */
 async function postModListing(order) {
     if (typeof order.item !== 'string' || typeof order.sellPrice !== 'number' || typeof order.quantity !== 'number') {
@@ -99,14 +93,13 @@ async function postModListing(order) {
             rank: 0,
         }
         const res = await wfMarketReq.post('/profile/orders', requestBody)
-        return res.data;
+        return res.data.payload.order.id;
     } catch (error) {
         console.log(error)
     }
 }
 
 async function test() {
-    await generateAugmentListings();
 
 }
 
@@ -131,48 +124,48 @@ async function delay(delay) {
 }
 
 /**
- * Using augmentNamesAndIds.json, posts an order on WFMarket for every WF augment mod using its average price
+ * Looks at every augment in database and post a listing of it on WFMarket
  */
 async function generateAugmentListings() {
-    const augmentModNames = await getWarframeAugmentMods();
-    for (let modName of augmentModNames) {
-        await delay(300);
+    const database = await parseJson('database');
+    for (let mod in database.augment_mods) {
+        let modName = "abating_link"
         const price = await getPriceForItem(modName)
         let listing = {
             item: modName,
             sellPrice: price ? price : 20,
             quantity: 99,
         }
-        await postModListing(listing);
+        const id = await postModListing(listing);
+        console.log(id)
         console.log(`${modName} listing posted!`)
     }
 
 }
 
-async function updateModIds() {
-    const augmentModNames = await getWarframeAugmentMods();
-    const augmentNamesAndIds = new Array();
-    for (let modName of augmentModNames) {
-        await delay(500);
-        const res = await wfMarketReq.get(`/items/${modName}`);
-        const { id } = res.data['payload']['item'];
-        console.log(`Setting ${modName} to ${id}`);
-        augmentNamesAndIds.push([modName, id])
-    }
-
-    const jsonToWrite = JSON.stringify(augmentNamesAndIds, null, 2);
-    await fs.writeFile(path.join(__dirname, 'augmentNamesAndIds.json'), jsonToWrite)
+/**
+ * 
+ * @param {string} modName the mod to get the id for in WFMarket format
+ * @returns {number} the ID of the mod.
+ * @example getModID('abating_link') -> '54e644ffe779897594fa68d2'
+ */
+async function getModID(modName) {
+    console.log(`Grabbing ID for ${modName}`)
+    await delay(300);
+    const res = await wfMarketReq.get(`/items/${modName}`);
+    const { id } = res.data['payload']['item'];
+    console.log(`ID for ${modName} is ${id}`)
+    return id;
 }
 
 /**
- * @async Updates every mod in database to have the current id. ID is retrieved from getModId()
+ * @async Updates every mod in database to have the current id. ID is retrieved from getModID()
  */
-async function updateJsonDbModIds() {
+async function updateAugmentModIdsInDB() {
     const database = await parseJson('database');
-    for (let syndicate in database) {
-        for (let mod in database[syndicate]['AugmentMods']) {
-            database[syndicate]['AugmentMods'][mod] = await getModID(mod)
-        }
+    const augmentMods = database.augment_mods;
+    for (let mod in augmentMods) {
+        database.augment_mods[mod].marketID = await getModID(mod)
     }
     const jsonToWrite = JSON.stringify(database);
     await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
@@ -180,63 +173,42 @@ async function updateJsonDbModIds() {
 
 /**
  * Uses warframe stats api to retrieve a list of all warframe augment mod names.
- * @returns A set containing a String of every Warframe Augment Mod, excluding conclave ones.
+ * Updates db.augment_mods to have every mod and its respective syndicates.
  */
-async function getWarframeAugmentMods(syndicate) {
+async function updateAugmentModsInDB() {
     const res = await wfStatApi.get('/mods', {
         params: {
             language: 'en',
             only: 'name,isAugment,drops'
         }
     })
-    const augmentModNames = new Set();
+    const database = await parseJson('database')
     // parse only augment mods
     const mods = res.data;
     mods.forEach(mod => {
-        if (mod.isAugment) {
-            if (mod.drops) {
-                mod.drops.forEach(drop => {
-                    if (!(drop.location.includes('Conclave'))) {
-                        if (syndicate) {
-                            if (drop.location.toLowerCase().includes(syndicate.replaceAll('_', ' '))) {
-                                augmentModNames.add(mod.name.toLowerCase().replaceAll(' ', '_').replaceAll("'", '').replaceAll("&", "and"))
-                            }
-                        } else {
-                            augmentModNames.add(mod.name.toLowerCase().replaceAll(' ', '_').replaceAll("'", '').replaceAll("&", "and"))
-                        }
+        if (mod.isAugment && mod.drops) {
+            const modName = mod.name;
+            const syndicates = new Array();
 
-                    }
-                })
-            }
+            mod.drops.forEach(drop => {
+                if (!(drop.location.includes('Conclave'))) {
+                    /* There's a bug w/ the augment 'safeguard' and 'safeguard switch' in the api. 
+                    Its drop tables are mixed in with the drop tables of the other mod, 
+                    so this step simply asserts that the drop location is for the same mod. 
+                    It's redundant, but solves this issue. */
+                    const type = drop.type.substring(0, drop.type.indexOf('(') - 1)
+                    if (type === mod.name)
+                        syndicates.push(drop.location.substring(0, drop.location.indexOf(',')).toLowerCase().replaceAll(' ', '_').replaceAll("'", '').replaceAll("&", "and"))
+                }
+            })
 
+            if (syndicates.length > 0)
+                database.augment_mods[modName.toLowerCase().replaceAll(' ', '_').replaceAll("'", '').replaceAll("&", "and")] = { syndicates }
         }
     });
 
-    return augmentModNames;
-}
-
-/**
- * @async Loops through mod name -> id map to find a mod's id with given name.
- * @param {string} modName The name of the mod to find. All lowercase, with spaces as underscores.
- * @example getModId('creeping_terrify') -> '56b656e0ef0390c7e4006383'
- * @returns the mod ID as a string.
- */
-async function getModID(modName) {
-    try {
-        const nameToIdMap = await parseJson('augmentNamesAndIds');
-        let modWithId = undefined;
-        for (let el of nameToIdMap) {
-            if (el[0] === modName) {
-                modWithId = el
-            }
-        }
-        if (modWithId === undefined) {
-            throw new Error(`Could not find mod with name of ${modName}`)
-        }
-        return modWithId[1]
-    } catch (error) {
-        console.log(error)
-    }
+    const jsonToWrite = JSON.stringify(database);
+    await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
 }
 
 /**
