@@ -99,22 +99,21 @@ async function postModListing(order) {
             rank: 0,
         }
         const res = await wfMarketReq.post('/profile/orders', requestBody)
-        return res;
+        return res.data;
     } catch (error) {
         console.log(error)
     }
 }
 
-async function getOrderID(item_name) {
-    try {
-        const augment = await parseJson('augment')
-        console.log(augment['New Loka']['AugmentMods'])
-    } catch (error) {
+async function test() {
+    await generateAugmentListings();
 
-    }
 }
 
-async function test() {
+/**
+ * Grabs the latest augment mod names from WF api and updates database.json to be populated with them and their respective WFMarket ids.
+ */
+async function updateDatabaseAugmentMods() {
     const database = await parseJson('database');
     for (let syndicate in database) {
         database[syndicate].AugmentMods = new Object();
@@ -138,9 +137,10 @@ async function generateAugmentListings() {
     const augmentModNames = await getWarframeAugmentMods();
     for (let modName of augmentModNames) {
         await delay(300);
+        const price = await getPriceForItem(modName)
         let listing = {
             item: modName,
-            sellPrice: await getPriceForItem(modName),
+            sellPrice: price ? price : 20,
             quantity: 99,
         }
         await postModListing(listing);
