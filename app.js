@@ -1,8 +1,8 @@
 const wfMarketTask = require('./wfmarkettask')
 
 async function main() {
-    //await wfMarketTask.login();
-    await wfMarketTask.test();
+    await wfMarketTask.login();
+    await wfMarketTask.main();
 
     // setTimeout(() => {
     //     console.log("CLICKING VISISBLE BUTTON!")
