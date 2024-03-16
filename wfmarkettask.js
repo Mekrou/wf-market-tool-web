@@ -100,7 +100,7 @@ async function postModListing(order) {
 }
 
 async function test() {
-
+    console.log(await getExhaustedSyndicates())
 }
 
 /**
@@ -129,18 +129,45 @@ async function delay(delay) {
 async function generateAugmentListings() {
     const database = await parseJson('database');
     for (let mod in database.augment_mods) {
-        let modName = "abating_link"
-        const price = await getPriceForItem(modName)
+        const price = await getPriceForItem(mod)
         let listing = {
-            item: modName,
+            item: mod,
             sellPrice: price ? price : 20,
             quantity: 99,
         }
         const id = await postModListing(listing);
         console.log(id)
-        console.log(`${modName} listing posted!`)
+        database.augment_mods[mod].orderID = id;
+        const date = new Date().toJSON();
+        database.augment_mods[mod].lastModified = date;
+        console.log(`${mod} listing posted!`)
+        await delay(300);
     }
 
+    const jsonToWrite = JSON.stringify(database);
+    await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
+}
+
+/**
+ * Using the stored order ids in database, removes listings from WF Market & their ids from db.
+ */
+async function deleteAugmentListings() {
+    const database = await parseJson('database')
+    for (let mod in database.augment_mods) {
+        const orderID = database.augment_mods[mod].orderID;
+        try {
+            const res = await wfMarketReq.delete(`/profile/orders/${orderID}`);
+        } catch (error) {
+            console.log("Order already deleted, removing from DB.")
+        }
+        database.augment_mods[mod].orderID = undefined;
+        database.augment_mods[mod].lastModified = undefined;
+        console.log(`${mod} order successfully removed.`)
+        await delay(300);
+    }
+
+    const jsonToWrite = JSON.stringify(database);
+    await fs.writeFile(path.join(__dirname, 'database.json'), jsonToWrite)
 }
 
 /**
@@ -230,6 +257,11 @@ async function getPriceForItem(itemName) {
     } catch (err) {
         console.log(err)
     }
+}
+
+async function getExhaustedSyndicates() {
+    const database = await parseJson('database')
+    return database.exhausted_syndicates;
 }
 
 module.exports = { login, test }
