@@ -100,7 +100,11 @@ async function postModListing(order) {
 }
 
 async function test() {
-    await shouldBeVisible("abating_link")
+    const database = await parseJson('database')
+    for (let mod in database.augment_mods)
+    {
+        await shouldBeVisible(mod);
+    }
 }
 
 /**
@@ -260,14 +264,13 @@ async function getPriceForItem(itemName) {
 }
 
 /**
- * 
+ * Reads the exhausted syndicates stored in database, which is required to be read beforehand.
  * @returns An Array of the user's currently exhausted syndicates
  * @example
  * [ 'steel_meridian', 'cephalon_suda, arbiters_of_hexis' ]
  */
-async function getExhaustedSyndicates() {
-    const database = await parseJson('database')
-    return database.exhausted_syndicates;
+function getExhaustedSyndicates(database) {
+    return new Set(database.exhausted_syndicates);
 }
 
 /**
@@ -276,7 +279,13 @@ async function getExhaustedSyndicates() {
  */
 async function shouldBeVisible(mod) {
     const database = await parseJson('database')
-    console.log(database.augment_mods.mod);
+    const syndicates = database.augment_mods[mod].syndicates;
+    let shouldBeVisible = false;
+    
+    // If at least one syndicate is not exhausted for each mod, then it should be visible.
+    shouldBeVisible = !(syndicates.every(syndicate => getExhaustedSyndicates(database).has(syndicate)))
+
+    return shouldBeVisible
 }
 
 module.exports = { login, test }
