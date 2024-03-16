@@ -100,7 +100,7 @@ async function postModListing(order) {
 }
 
 async function test() {
-    console.log(await getExhaustedSyndicates())
+    await shouldBeVisible("abating_link")
 }
 
 /**
@@ -259,9 +259,24 @@ async function getPriceForItem(itemName) {
     }
 }
 
+/**
+ * 
+ * @returns An Array of the user's currently exhausted syndicates
+ * @example
+ * [ 'steel_meridian', 'cephalon_suda, arbiters_of_hexis' ]
+ */
 async function getExhaustedSyndicates() {
     const database = await parseJson('database')
     return database.exhausted_syndicates;
+}
+
+/**
+ * Checks whether or not a mod should be toggled invisible based on the availibility of its syndicates.
+ * @param {String} mod the mod name 
+ */
+async function shouldBeVisible(mod) {
+    const database = await parseJson('database')
+    console.log(database.augment_mods.mod);
 }
 
 module.exports = { login, test }
