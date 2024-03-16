@@ -100,13 +100,12 @@ async function postModListing(order) {
 }
 
 async function main() {
-    // const database = await parseJson('database')
-    // for (let mod in database.augment_mods)
-    // {
-    //     await shouldBeVisible(mod);
-    // }
-
-    await toggleOrderVisibility('65f5a492c405f600a9e06b75');
+    const database = await parseJson('database')
+    for (let mod in database.augment_mods)
+    {
+        if (!(await shouldBeVisible(mod)))
+            await hideOrder(database.augment_mods[mod].orderID)
+    }
 }
 
 /**
@@ -290,10 +289,14 @@ async function shouldBeVisible(mod) {
     return shouldBeVisible
 }
 
-async function toggleOrderVisibility(orderID) {
-    console.log(`Toggling visibility of ${orderID}`)
+async function hideOrder(orderID) {
+    console.log(`Hiding visibility of ${orderID}`)
     const res = await wfMarketReq.put(`/profile/orders/${orderID}`, { orderID, visible: 'false'})
-    console.log(res.data);
+}
+
+async function showOrder(orderID) {
+    console.log(`Opening visibility of ${orderID}`)
+    const res = await wfMarketReq.put(`/profile/orders/${orderID}`, { orderID, visible: 'true'})
 }
 
 module.exports = { login, main }
