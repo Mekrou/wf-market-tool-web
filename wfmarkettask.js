@@ -105,6 +105,8 @@ async function main() {
     {
         if (!(await shouldBeVisible(mod)))
             await hideOrder(database.augment_mods[mod].orderID)
+
+        await delay(400)
     }
 }
 
