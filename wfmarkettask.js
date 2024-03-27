@@ -100,14 +100,17 @@ async function postModListing(order) {
 }
 
 async function main() {
-    const database = await parseJson('database')
-    for (let mod in database.augment_mods)
-    {
-        if (!(await shouldBeVisible(mod)))
-            await hideOrder(database.augment_mods[mod].orderID)
+    // const database = await parseJson('database')
+    // for (let mod in database.augment_mods)
+    // {
+    //     if (!(await shouldBeVisible(mod)))
+    //         await hideOrder(database.augment_mods[mod].orderID)
+    //     else 
+    //         await showOrder(database.augment_mods[mod].orderID)
 
-        await delay(400)
-    }
+    //     await delay(400)
+    // }
+    updateDatabaseAugmentMods()
 }
 
 /**

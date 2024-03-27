@@ -1,4 +1,9 @@
 const wfMarketTask = require('./wfmarkettask')
+const screenshot = require('screenshot-desktop')
+
+
+
+
 
 async function main() {
     await wfMarketTask.login();

@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "axios": "^1.6.7"
+    "axios": "^1.6.7",
+    "screenshot-desktop": "^1.15.0"
   },
   "scripts": {
     "lint": "jshint .",
